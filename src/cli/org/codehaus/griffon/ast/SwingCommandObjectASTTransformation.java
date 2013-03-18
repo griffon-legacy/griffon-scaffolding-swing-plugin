@@ -16,28 +16,20 @@
 
 package org.codehaus.griffon.ast;
 
-import griffon.plugins.scaffolding.AtomicValue;
-import griffon.plugins.scaffolding.atoms.*;
-import griffon.plugins.scaffolding.atoms.StringValue;
-import griffon.util.ApplicationClassLoader;
-import griffon.util.CollectionUtils;
-import griffon.util.RunnableWithArgs;
-import griffon.util.RunnableWithArgsClosure;
+import griffon.plugins.scaffolding.CommandObjectUtils;
 import org.codehaus.groovy.ast.*;
+import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.control.SourceUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
-import static griffon.util.GriffonExceptionHandler.sanitize;
 import static griffon.util.GriffonNameUtils.*;
 import static org.codehaus.griffon.ast.GriffonASTUtils.*;
-import static org.codehaus.groovy.runtime.ResourceGroovyMethods.eachLine;
 
 /**
  * Handles generation of code for the {@code @CommandObject} annotation.
@@ -51,98 +43,9 @@ public class SwingCommandObjectASTTransformation extends CommandObjectASTTransfo
     private static final String VALUE = "Value";
     private static final String VALUE_ARG = "value";
     private static final String SET_VALUE = "setValue";
+    private static final String SET_PRIMITIVE = "setPrimitive";
 
-    private static Map<ClassNode, ClassNode> SUPPORTED_ATOM_TYPES = CollectionUtils.<ClassNode, ClassNode>map()
-        .e(makeClassSafe(BigDecimal.class), makeClassSafe(BigDecimalValue.class))
-        .e(makeClassSafe(BigInteger.class), makeClassSafe(BigIntegerValue.class))
-        .e(makeClassSafe(Boolean.class), makeClassSafe(BooleanValue.class))
-        .e(makeClassSafe(Byte.class), makeClassSafe(ByteValue.class))
-        .e(makeClassSafe(Calendar.class), makeClassSafe(CalendarValue.class))
-        .e(makeClassSafe(Date.class), makeClassSafe(DateValue.class))
-        .e(makeClassSafe(Double.class), makeClassSafe(DoubleValue.class))
-        .e(makeClassSafe(Float.class), makeClassSafe(FloatValue.class))
-        .e(makeClassSafe(Integer.class), makeClassSafe(IntegerValue.class))
-        .e(makeClassSafe(Long.class), makeClassSafe(LongValue.class))
-        .e(makeClassSafe(Short.class), makeClassSafe(ShortValue.class))
-        .e(makeClassSafe(String.class), makeClassSafe(StringValue.class))
-        .e(makeClassSafe(Boolean.TYPE), makeClassSafe(BooleanValue.class))
-        .e(makeClassSafe(Byte.TYPE), makeClassSafe(ByteValue.class))
-        .e(makeClassSafe(Double.TYPE), makeClassSafe(DoubleValue.class))
-        .e(makeClassSafe(Float.TYPE), makeClassSafe(FloatValue.class))
-        .e(makeClassSafe(Integer.TYPE), makeClassSafe(IntegerValue.class))
-        .e(makeClassSafe(Long.TYPE), makeClassSafe(LongValue.class))
-        .e(makeClassSafe(Short.TYPE), makeClassSafe(ShortValue.class));
-
-    static {
-        initializeAtomTypes();
-    }
-
-    private static void initializeAtomTypes() {
-        Enumeration<URL> urls = null;
-
-        try {
-            urls = ApplicationClassLoader.get().getResources("META-INF/services/" + AtomicValue.class.getName());
-        } catch (IOException ioe) {
-            return;
-        }
-
-        if (urls == null) return;
-
-        while (urls.hasMoreElements()) {
-            URL url = urls.nextElement();
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Reading " + AtomicValue.class.getName() + " definitions from " + url);
-            }
-
-            try {
-                eachLine(url, new RunnableWithArgsClosure(new RunnableWithArgs() {
-                    @Override
-                    public void run(Object[] args) {
-                        String line = (String) args[0];
-                        if (line.startsWith("#") || isBlank(line)) return;
-                        try {
-                            String[] parts = line.trim().split("=");
-                            Class targetType = loadClass(parts[0].trim());
-                            Class atomicValueClass = loadClass(parts[1].trim());
-                            if (LOG.isDebugEnabled()) {
-                                LOG.debug("Registering " + atomicValueClass.getName() + " as AtomicValue for " + targetType.getName());
-                            }
-                            SUPPORTED_ATOM_TYPES.put(makeClassSafe(targetType), makeClassSafe(atomicValueClass));
-                        } catch (Exception e) {
-                            if (LOG.isWarnEnabled()) {
-                                LOG.warn("Could not load AtomicValue with " + line, sanitize(e));
-                            }
-                        }
-                    }
-                }));
-            } catch (IOException e) {
-                if (LOG.isWarnEnabled()) {
-                    LOG.warn("Could not load AtomicValue definitions from " + url, sanitize(e));
-                }
-            }
-        }
-    }
-
-    public static Class<?> loadClass(String className) throws ClassNotFoundException {
-        ClassNotFoundException cnfe = null;
-
-        ClassLoader cl = CommandObjectASTTransformation.class.getClassLoader();
-        try {
-            return cl.loadClass(className);
-        } catch (ClassNotFoundException e) {
-            cnfe = e;
-        }
-
-        cl = Thread.currentThread().getContextClassLoader();
-        try {
-            return cl.loadClass(className);
-        } catch (ClassNotFoundException e) {
-            cnfe = e;
-        }
-
-        if (cnfe != null) throw cnfe;
-        return null;
-    }
+    private static final Map<ClassNode, ClassNode> SUPPORTED_ATOM_TYPES = new LinkedHashMap<ClassNode, ClassNode>();
 
     /**
      * Handles the bulk of the processing, mostly delegating to other methods.
@@ -153,6 +56,12 @@ public class SwingCommandObjectASTTransformation extends CommandObjectASTTransfo
     public void visit(ASTNode[] nodes, SourceUnit source) {
         checkNodesForAnnotationAndType(nodes[0], nodes[1]);
 
+        if (SUPPORTED_ATOM_TYPES.isEmpty()) {
+            for (Map.Entry<Class, Class> entry : CommandObjectUtils.initializeAtomTypes().entrySet()) {
+                SUPPORTED_ATOM_TYPES.put(makeClassSafe(entry.getKey()), makeClassSafe(entry.getValue()));
+            }
+        }
+
         ClassNode classNode = (ClassNode) nodes[1];
 
         List<PropertyNode> properties = new ArrayList<PropertyNode>(classNode.getProperties());
@@ -161,6 +70,7 @@ public class SwingCommandObjectASTTransformation extends CommandObjectASTTransfo
                 || !propertyNode.isPublic() || !isPropertyTypeSupported(propertyNode))
                 continue;
 
+            Expression initialValue = propertyNode.getField().getInitialValueExpression();
             String propertyName = propertyNode.getField().getName();
             classNode.removeField(propertyName);
             classNode.getProperties().remove(propertyNode);
@@ -198,6 +108,17 @@ public class SwingCommandObjectASTTransformation extends CommandObjectASTTransfo
                 ClassNode.EMPTY_ARRAY,
                 returns(field(fieldNode))
             ));
+
+            if (propertyNode.getType().getTypeClass().isPrimitive()) {
+                classNode.addObjectInitializerStatements(
+                    stmnt(call(field(classNode, propertyName), SET_PRIMITIVE, args(constx(true))))
+                );
+            }
+            if (initialValue != null) {
+                classNode.addObjectInitializerStatements(
+                    stmnt(call(THIS, getSetterName(propertyName), args(initialValue)))
+                );
+            }
         }
     }
 
