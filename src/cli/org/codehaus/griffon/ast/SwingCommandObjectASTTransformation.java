@@ -16,12 +16,10 @@
 
 package org.codehaus.griffon.ast;
 
-import griffon.plugins.scaffolding.CommandObjectUtils;
+import griffon.plugins.scaffolding.ScaffoldingUtils;
 import org.codehaus.groovy.ast.*;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.control.SourceUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -38,7 +36,6 @@ import static org.codehaus.griffon.ast.GriffonASTUtils.*;
  * @author Andres Almiray
  */
 public class SwingCommandObjectASTTransformation extends CommandObjectASTTransformation {
-    private static final Logger LOG = LoggerFactory.getLogger(SwingCommandObjectASTTransformation.class);
     private static final String PROPERTY = "Property";
     private static final String VALUE = "Value";
     private static final String VALUE_ARG = "value";
@@ -57,7 +54,7 @@ public class SwingCommandObjectASTTransformation extends CommandObjectASTTransfo
         checkNodesForAnnotationAndType(nodes[0], nodes[1]);
 
         if (SUPPORTED_ATOM_TYPES.isEmpty()) {
-            for (Map.Entry<Class, Class> entry : CommandObjectUtils.initializeAtomTypes().entrySet()) {
+            for (Map.Entry<Class, Class> entry : ScaffoldingUtils.initializeAtomTypes().entrySet()) {
                 SUPPORTED_ATOM_TYPES.put(makeClassSafe(entry.getKey()), makeClassSafe(entry.getValue()));
             }
         }

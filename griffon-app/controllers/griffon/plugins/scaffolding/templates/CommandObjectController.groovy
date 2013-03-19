@@ -3,7 +3,7 @@ package griffon.plugins.scaffolding.templates
 import java.awt.Window
 import griffon.transform.Threading
 import griffon.plugins.scaffolding.ScaffoldingContext
-import griffon.plugins.scaffolding.CommandObjectUtils
+import griffon.plugins.scaffolding.ScaffoldingUtils
 
 class CommandObjectController {
     def model
@@ -19,7 +19,7 @@ class CommandObjectController {
         if(!dialog || dialog.owner != window) {
             app.windowManager.hide(dialog)
             model.title = scaffoldingContext.resolveMessage('title',
-                              CommandObjectUtils.getNaturalName(scaffoldingContext.validateable))
+                ScaffoldingUtils.getNaturalName(scaffoldingContext.validateable))
             dialog = builder.dialog(
                 owner: window,
                 title: model.title,

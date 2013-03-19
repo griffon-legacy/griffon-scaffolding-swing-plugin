@@ -16,70 +16,45 @@
 
 package griffon.plugins.scaffolding;
 
-import griffon.core.resources.editors.ExtendedPropertyEditor;
-import griffon.core.resources.editors.ValueConversionException;
 import griffon.exceptions.GriffonException;
 import griffon.plugins.validation.constraints.ConstrainedProperty;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
+import javax.swing.*;
+import javax.swing.event.*;
+import javax.swing.table.TableModel;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 import java.awt.Component;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.beans.*;
 import java.lang.reflect.InvocationTargetException;
 
-import static griffon.util.GriffonClassUtils.*;
-import static griffon.util.GriffonExceptionHandler.sanitize;
+import static griffon.util.GriffonClassUtils.getProperty;
+import static griffon.util.GriffonClassUtils.setProperty;
 
 /**
  * @author Andres Almiray
  */
-public class PropertyBinding implements Disposable {
-    private static final Logger LOG = LoggerFactory.getLogger(PropertyBinding.class);
-
+public class PropertyBinding extends AbstractPropertyBinding {
     private static final String VALUE = "value";
     private Component source;
     private String sourcePropertyName;
     private AtomicValue property;
-    private ConstrainedProperty constrainedProperty;
     private PropertyDescriptor sourcePropertyDescriptor;
-    private final Object LOCK = new Object[0];
-    private boolean firing = false;
-
-    private final PropertyChangeListener sourceChangeListener = new PropertyChangeListener() {
-        public void propertyChange(PropertyChangeEvent propertyChangeEvent) {
-            updateTarget();
-        }
-    };
-
-    private final PropertyChangeListener targetChangeListener = new PropertyChangeListener() {
-        public void propertyChange(PropertyChangeEvent propertyChangeEvent) {
-            updateSource();
-        }
-    };
 
     public static PropertyBinding create(final Component source, final String sourcePropertyName, final AtomicValue property, ConstrainedProperty constrainedProperty) {
         return new PropertyBinding(source, sourcePropertyName, property, constrainedProperty);
     }
 
     private PropertyBinding(final Component source, final String sourcePropertyName, AtomicValue property, ConstrainedProperty constrainedProperty) {
+        super(constrainedProperty);
         this.source = source;
         this.sourcePropertyName = sourcePropertyName;
-        this.constrainedProperty = constrainedProperty;
         this.property = property;
         this.sourcePropertyDescriptor = resolvePropertyDescriptor(source, sourcePropertyName);
 
-        bindSource();
-        bindTarget();
-
-        if (getTargetPropertyValue() != null) {
-            updateSource();
-        } else {
-            updateTarget();
-        }
+        bind();
     }
 
     public void dispose() {
@@ -88,47 +63,10 @@ public class PropertyBinding implements Disposable {
         source = null;
         sourcePropertyDescriptor = null;
         property = null;
-        constrainedProperty = null;
+        super.dispose();
     }
 
-    private void updateSource() {
-        synchronized (LOCK) {
-            if (firing) return;
-            firing = true;
-            try {
-                PropertyEditor editor = resolveSourcePropertyEditor();
-                editor.setValue(getTargetPropertyValue());
-                setSourcePropertyValue(editor.getValue());
-            } catch (ValueConversionException e) {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("Could not update target property '" + constrainedProperty.getPropertyName() + "'", sanitize(e));
-                }
-            } finally {
-                firing = false;
-            }
-        }
-    }
-
-    private void updateTarget() {
-        synchronized (LOCK) {
-            if (firing) return;
-            firing = true;
-            try {
-                PropertyEditor editor = resolveTargetPropertyEditor();
-                editor.setValue(getSourcePropertyValue());
-                setTargetPropertyValue(editor.getValue());
-            } catch (ValueConversionException e) {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("Could not update source property '" + sourcePropertyName + "'", sanitize(e));
-                }
-                setTargetPropertyValue(null);
-            } finally {
-                firing = false;
-            }
-        }
-    }
-
-    private void bindSource() {
+    protected void bindSource() {
         if (source instanceof JTextComponent) {
             JTextComponent textComponent = (JTextComponent) source;
             if ("text".equals(sourcePropertyName)) {
@@ -153,27 +91,173 @@ public class PropertyBinding implements Disposable {
                     }
                 });
                 textComponent.getDocument().addDocumentListener(documentListener);
-            } else {
-                source.addPropertyChangeListener(sourcePropertyName, sourceChangeListener);
             }
-        } else {
-            source.addPropertyChangeListener(sourcePropertyName, sourceChangeListener);
+        } else if (source instanceof AbstractButton) {
+            AbstractButton buttonComponent = (AbstractButton) source;
+            if ("selected".equals(sourcePropertyName)) {
+                final ItemListener itemListener = new ItemListener() {
+                    public void itemStateChanged(ItemEvent itemEvent) {
+                        updateTarget();
+                    }
+                };
+                buttonComponent.addPropertyChangeListener("model", new PropertyChangeListener() {
+                    public void propertyChange(PropertyChangeEvent event) {
+                        updateTarget();
+                        ((ButtonModel) event.getOldValue()).removeItemListener(itemListener);
+                        ((ButtonModel) event.getNewValue()).addItemListener(itemListener);
+                    }
+                });
+                buttonComponent.getModel().addItemListener(itemListener);
+            }
+        } else if (source instanceof JComboBox) {
+            JComboBox comboBoxComponent = (JComboBox) source;
+            if ("selectedElement".equals(sourcePropertyName) ||
+                "selectedItem".equals(sourcePropertyName) ||
+                "selectedIndex".equals(sourcePropertyName)) {
+                final ItemListener itemListener = new ItemListener() {
+                    public void itemStateChanged(ItemEvent itemEvent) {
+                        updateTarget();
+                    }
+                };
+                comboBoxComponent.addPropertyChangeListener("model", new PropertyChangeListener() {
+                    public void propertyChange(PropertyChangeEvent event) {
+                        updateTarget();
+                    }
+                });
+                comboBoxComponent.addItemListener(itemListener);
+            } else if ("elements".equals(sourcePropertyName)) {
+                final ListDataListener listDataListener = new ListDataListener() {
+                    public void intervalAdded(ListDataEvent listDataEvent) {
+                        updateTarget();
+                    }
+
+                    public void intervalRemoved(ListDataEvent listDataEvent) {
+                        updateTarget();
+                    }
+
+                    public void contentsChanged(ListDataEvent listDataEvent) {
+                        updateTarget();
+                    }
+                };
+                comboBoxComponent.addPropertyChangeListener("model", new PropertyChangeListener() {
+                    public void propertyChange(PropertyChangeEvent event) {
+                        updateTarget();
+                        ((ComboBoxModel) event.getOldValue()).removeListDataListener(listDataListener);
+                        ((ComboBoxModel) event.getNewValue()).addListDataListener(listDataListener);
+                    }
+                });
+                comboBoxComponent.getModel().addListDataListener(listDataListener);
+            }
+        } else if (source instanceof JList) {
+            JList listComponent = (JList) source;
+            if ("selectedValue".equals(sourcePropertyName) ||
+                "selectedElement".equals(sourcePropertyName) ||
+                "selectedValues".equals(sourcePropertyName) ||
+                "selectedElements".equals(sourcePropertyName) ||
+                "selectedIndex".equals(sourcePropertyName) ||
+                "selectedIndices".equals(sourcePropertyName)) {
+                final ListSelectionListener listSelectionListener = new ListSelectionListener() {
+                    public void valueChanged(ListSelectionEvent listSelectionEvent) {
+                        updateTarget();
+                    }
+                };
+                listComponent.addPropertyChangeListener("model", new PropertyChangeListener() {
+                    public void propertyChange(PropertyChangeEvent event) {
+                        updateTarget();
+                        ((ListSelectionModel) event.getOldValue()).removeListSelectionListener(listSelectionListener);
+                        ((ListSelectionModel) event.getNewValue()).addListSelectionListener(listSelectionListener);
+                    }
+                });
+                listComponent.addListSelectionListener(listSelectionListener);
+            } else if ("elements".equals(sourcePropertyName)) {
+                final ListDataListener listDataListener = new ListDataListener() {
+                    public void intervalAdded(ListDataEvent listDataEvent) {
+                        updateTarget();
+                    }
+
+                    public void intervalRemoved(ListDataEvent listDataEvent) {
+                        updateTarget();
+                    }
+
+                    public void contentsChanged(ListDataEvent listDataEvent) {
+                        updateTarget();
+                    }
+                };
+                listComponent.addPropertyChangeListener("model", new PropertyChangeListener() {
+                    public void propertyChange(PropertyChangeEvent event) {
+                        updateTarget();
+                        ((ListModel) event.getOldValue()).removeListDataListener(listDataListener);
+                        ((ListModel) event.getNewValue()).addListDataListener(listDataListener);
+                    }
+                });
+                listComponent.getModel().addListDataListener(listDataListener);
+            }
+        } else if (source instanceof JSlider) {
+            JSlider sliderComponent = (JSlider) source;
+            if ("value".equals(sourcePropertyName)) {
+                final ChangeListener changeListener = new ChangeListener() {
+                    public void stateChanged(ChangeEvent changeEvent) {
+                        updateTarget();
+                    }
+                };
+                sliderComponent.addPropertyChangeListener("model", new PropertyChangeListener() {
+                    public void propertyChange(PropertyChangeEvent event) {
+                        updateTarget();
+                        ((BoundedRangeModel) event.getOldValue()).removeChangeListener(changeListener);
+                        ((BoundedRangeModel) event.getNewValue()).addChangeListener(changeListener);
+                    }
+                });
+                sliderComponent.getModel().addChangeListener(changeListener);
+            }
+        } else if (source instanceof JTable) {
+            JTable tableComponent = (JTable) source;
+            if ("selectedElement".equals(sourcePropertyName) ||
+                "selectedElements".equals(sourcePropertyName)) {
+                final ListSelectionListener listSelectionListener = new ListSelectionListener() {
+                    public void valueChanged(ListSelectionEvent listSelectionEvent) {
+                        updateTarget();
+                    }
+                };
+                tableComponent.addPropertyChangeListener("model", new PropertyChangeListener() {
+                    public void propertyChange(PropertyChangeEvent event) {
+                        updateTarget();
+                        ((ListSelectionModel) event.getOldValue()).removeListSelectionListener(listSelectionListener);
+                        ((ListSelectionModel) event.getNewValue()).addListSelectionListener(listSelectionListener);
+                    }
+                });
+                tableComponent.getSelectionModel().addListSelectionListener(listSelectionListener);
+            } else if ("elements".equals(sourcePropertyName)) {
+                final TableModelListener tableModelListener = new TableModelListener() {
+                    public void tableChanged(TableModelEvent tableModelEvent) {
+                        updateTarget();
+                    }
+                };
+                tableComponent.addPropertyChangeListener("model", new PropertyChangeListener() {
+                    public void propertyChange(PropertyChangeEvent event) {
+                        updateTarget();
+                        ((TableModel) event.getOldValue()).removeTableModelListener(tableModelListener);
+                        ((TableModel) event.getNewValue()).addTableModelListener(tableModelListener);
+                    }
+                });
+                tableComponent.getModel().addTableModelListener(tableModelListener);
+            }
         }
+        source.addPropertyChangeListener(sourcePropertyName, sourceChangeListener);
     }
 
-    private void bindTarget() {
+    protected void bindTarget() {
         property.addPropertyChangeListener(VALUE, targetChangeListener);
     }
 
-    private Object getTargetPropertyValue() {
+    protected Object getTargetPropertyValue() {
         return property.getValue();
     }
 
-    private void setTargetPropertyValue(Object value) {
+    protected void setTargetPropertyValue(Object value) {
         property.setValue(value);
     }
 
-    private void setSourcePropertyValue(Object value) {
+    protected void setSourcePropertyValue(Object value) {
         try {
             setProperty(source, sourcePropertyName, value);
         } catch (IllegalAccessException e) {
@@ -185,7 +269,7 @@ public class PropertyBinding implements Disposable {
         }
     }
 
-    private Object getSourcePropertyValue() {
+    protected Object getSourcePropertyValue() {
         try {
             return getProperty(source, sourcePropertyName);
         } catch (IllegalAccessException e) {
@@ -197,31 +281,7 @@ public class PropertyBinding implements Disposable {
         }
     }
 
-    private PropertyEditor resolveTargetPropertyEditor() {
-        PropertyEditor editor = PropertyEditorManager.findEditor(constrainedProperty.getPropertyType());
-        if (editor instanceof ExtendedPropertyEditor) {
-            ((ExtendedPropertyEditor) editor).setFormat(constrainedProperty.getFormat());
-        }
-        return editor;
-    }
-
-    private PropertyEditor resolveSourcePropertyEditor() {
-        PropertyEditor editor = PropertyEditorManager.findEditor(sourcePropertyDescriptor.getPropertyType());
-        if (editor instanceof ExtendedPropertyEditor) {
-            ((ExtendedPropertyEditor) editor).setFormat(constrainedProperty.getFormat());
-        }
-        return editor;
-    }
-
-    private PropertyDescriptor resolvePropertyDescriptor(Object source, String sourcePropertyName) {
-        try {
-            return getPropertyDescriptor(source, sourcePropertyName);
-        } catch (IllegalAccessException e) {
-            throw new GriffonException(e);
-        } catch (InvocationTargetException e) {
-            throw new GriffonException(e.getTargetException());
-        } catch (NoSuchMethodException e) {
-            throw new GriffonException(e);
-        }
+    protected PropertyEditor resolveSourcePropertyEditor() {
+        return PropertyEditorManager.findEditor(sourcePropertyDescriptor.getPropertyType());
     }
 }
