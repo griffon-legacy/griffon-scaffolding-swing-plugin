@@ -209,6 +209,23 @@ public class PropertyBinding extends AbstractPropertyBinding {
                 });
                 sliderComponent.getModel().addChangeListener(changeListener);
             }
+        } else if (source instanceof JSpinner) {
+            JSpinner spinnerComponent = (JSpinner) source;
+            if ("value".equals(sourcePropertyName)) {
+                final ChangeListener changeListener = new ChangeListener() {
+                    public void stateChanged(ChangeEvent changeEvent) {
+                        updateTarget();
+                    }
+                };
+                spinnerComponent.addPropertyChangeListener("model", new PropertyChangeListener() {
+                    public void propertyChange(PropertyChangeEvent event) {
+                        updateTarget();
+                        ((SpinnerModel) event.getOldValue()).removeChangeListener(changeListener);
+                        ((SpinnerModel) event.getNewValue()).addChangeListener(changeListener);
+                    }
+                });
+                spinnerComponent.getModel().addChangeListener(changeListener);
+            }
         } else if (source instanceof JTable) {
             JTable tableComponent = (JTable) source;
             if ("selectedElement".equals(sourcePropertyName) ||

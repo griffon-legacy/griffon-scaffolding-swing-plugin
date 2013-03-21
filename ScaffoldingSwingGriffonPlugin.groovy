@@ -27,7 +27,8 @@ class ScaffoldingSwingGriffonPlugin {
         'swing'      : '1.3.0',
         'scaffolding': '0.1',
         'miglayout'  : '1.0.0',
-        'css-builder': '1.1.0'
+        'css-builder': '1.1.0',
+        'jxlayer'    : '1.0.0'
     ]
     // resources that are included in plugin packaging
     List pluginIncludes = []

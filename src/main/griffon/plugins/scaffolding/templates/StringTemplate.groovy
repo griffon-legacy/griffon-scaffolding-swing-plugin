@@ -2,40 +2,31 @@ package griffon.plugins.scaffolding.templates
 
 int sizeThreshold = 250
 
-Map attributesCopy = [:]
-attributesCopy.putAll(constrainedProperty.attributes)
-
 if (constrainedProperty.minSize >= sizeThreshold || constrainedProperty.maxSize >= sizeThreshold ||
     constrainedProperty.size?.from >= sizeThreshold || constrainedProperty.size?.to >= sizeThreshold) {
 
-    Map scrollPaneAttributes = [constraints: 'top, grow']
-    Map textAreaAttributes = [id: propertyName]
-    if (attributesCopy.containsKey('scrollPane')) {
-        scrollPaneAttributes.putAll(attributesCopy.remove('scrollPane'))
-    }
-    if (attributesCopy.containsKey('textArea')) {
-        textAreaAttributes.putAll(attributesCopy.remove('textArea'))
-    }
-    textAreaAttributes.putAll(attributesCopy)
-    textAreaAttributes.editable = constrainedProperty.editable
+    Map widgetAttributes = scaffoldingContext.widgetAttributes('textArea', constrainedProperty)
+    widgetAttributes.editable = constrainedProperty.editable
+    if (!widgetAttributes.containsKey('constraints')) widgetAttributes.constraints = 'top, grow'
+    Map scrollPaneAttributes = widgetAttributes.remove('scrollPane') ?: [:]
+    scrollPaneAttributes.constraints = widgetAttributes.remove('constraints')
 
-    scrollPane(scrollPaneAttributes) {
-        textArea(textAreaAttributes)
-        noparent {
-            bean(getVariable(propertyName), text: bind('value', mutual: true,
-                target: scaffoldingContext.validateable."${propertyName}Property"()))
+    errorDecorator {
+        scrollPane(scrollPaneAttributes) {
+            textArea(textAreaAttributes)
+            scaffoldingContext.bind(getVariable(propertyName), 'text',
+                scaffoldingContext.validateable."${propertyName}Property"(), constrainedProperty)
         }
     }
 } else {
-    attributesCopy.id = propertyName
-    if (!attributesCopy.containsKey('constraints')) attributesCopy.constraints = 'top, grow'
-    if (!attributesCopy.containsKey('columns')) attributesCopy.columns = 20
-    attributesCopy.editable = constrainedProperty.editable
-
     String widgetNode = constrainedProperty.password ? 'passwordField' : 'textField'
-    "${widgetNode}"(attributesCopy)
-    noparent {
-        bean(getVariable(propertyName), text: bind('value', mutual: true,
-            target: scaffoldingContext.validateable."${propertyName}Property"()))
+    Map widgetAttributes = scaffoldingContext.widgetAttributes(widgetNode, constrainedProperty)
+    widgetAttributes.editable = constrainedProperty.editable
+    if (!widgetAttributes.containsKey('constraints')) widgetAttributes.constraints = 'top, grow'
+
+    errorDecorator {
+        "${widgetNode}"(widgetAttributes)
+        scaffoldingContext.bind(getVariable(propertyName), 'text',
+            scaffoldingContext.validateable."${propertyName}Property"(), constrainedProperty)
     }
 }
