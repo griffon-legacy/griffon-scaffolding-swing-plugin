@@ -1,5 +1,7 @@
 package griffon.plugins.scaffolding.templates
 
+import griffon.plugins.scaffolding.atoms.EnumValue
+
 Map widgetAttributes = scaffoldingContext.widgetAttributes('spinner', constrainedProperty)
 if (!widgetAttributes.containsKey('constraints')) widgetAttributes.constraints = 'top, grow'
 def valueHolder = scaffoldingContext.validateable."${propertyName}Property"()
@@ -18,6 +20,7 @@ if (constrainedProperty.min != null && constrainedProperty.max != null) {
     modelAttributes.maximum = constrainedProperty.inList[-1]
 }
 modelAttributes.value = modelAttributes.value ?: modelAttributes.minimum
+if (modelAttributes.value == null) modelAttributes.remove('value')
 
 if (Number.class.isAssignableFrom(valueHolder.valueType)) {
     modelAttributes.stepSize = widgetAttributes.remove('stepSize') ?: 1
@@ -28,8 +31,12 @@ if (Number.class.isAssignableFrom(valueHolder.valueType)) {
     modelAttributes.calendarField = widgetAttributes.constainsKey('calendarField') ? widgetAttributes.remove('calendarField') : Calendar.DAY_OF_MONTH
     widgetAttributes.model = spinnerDateModel(modelAttributes)
 } else {
-    if (constrainedProperty.inList)
+    if (constrainedProperty.inList) {
         modelAttributes.list = constrainedProperty.inList
+    } else if (valueHolder instanceof EnumValue) {
+        modelAttributes.list = []
+        modelAttributes.list.addAll(EnumSet.allOf(valueHolder.enumType))
+    }
     widgetAttributes.model = spinnerListModel(modelAttributes)
 }
 

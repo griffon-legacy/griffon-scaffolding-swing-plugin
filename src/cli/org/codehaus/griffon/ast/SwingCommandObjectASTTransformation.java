@@ -17,7 +17,9 @@
 package org.codehaus.griffon.ast;
 
 import griffon.plugins.scaffolding.ScaffoldingUtils;
+import griffon.plugins.scaffolding.atoms.EnumValue;
 import org.codehaus.groovy.ast.*;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.control.SourceUnit;
 
@@ -42,6 +44,7 @@ public class SwingCommandObjectASTTransformation extends CommandObjectASTTransfo
     private static final String SET_VALUE = "setValue";
     private static final String SET_PRIMITIVE = "setPrimitive";
 
+    private static final ClassNode ENUM_ATOMIC_VALUE = makeClassSafe(EnumValue.class);
     private static final Map<ClassNode, ClassNode> SUPPORTED_ATOM_TYPES = new LinkedHashMap<ClassNode, ClassNode>();
 
     /**
@@ -69,30 +72,33 @@ public class SwingCommandObjectASTTransformation extends CommandObjectASTTransfo
 
             Expression initialValue = propertyNode.getField().getInitialValueExpression();
             String propertyName = propertyNode.getField().getName();
+            ClassNode propertyNodeType = propertyNode.getType();
             classNode.removeField(propertyName);
             classNode.getProperties().remove(propertyNode);
-            ClassNode propertyType = SUPPORTED_ATOM_TYPES.get(propertyNode.getType());
+            ClassNode propertyType = propertyNodeType.isEnum() ? ENUM_ATOMIC_VALUE : SUPPORTED_ATOM_TYPES.get(propertyNodeType);
 
             FieldNode fieldNode = classNode.addField(
                 propertyName,
                 ACC_FINAL | ACC_PRIVATE,
                 makeClassSafe(propertyType),
-                ctor(makeClassSafe(propertyType), NO_ARGS));
+                instantiateAtomicValue(propertyType, propertyNodeType));
 
+            String typeName = uncapitalize(propertyNodeType.getNameWithoutPackage());
+            if (propertyNodeType.isEnum()) typeName = "enum";
             injectMethod(classNode, new MethodNode(
                 getGetterName(propertyName),
                 ACC_PUBLIC,
-                makeClassSafe(propertyNode.getType()),
+                makeClassSafe(propertyNodeType),
                 params(),
                 ClassNode.EMPTY_ARRAY,
-                returns(call(field(fieldNode), uncapitalize(propertyNode.getType().getNameWithoutPackage()) + VALUE, NO_ARGS))
+                returns(call(field(fieldNode), typeName + VALUE, NO_ARGS))
             ));
 
             injectMethod(classNode, new MethodNode(
                 getSetterName(propertyName),
                 ACC_PUBLIC,
                 ClassHelper.VOID_TYPE,
-                params(param(propertyNode.getType(), VALUE_ARG)),
+                params(param(makeClassSafe(propertyNodeType), VALUE_ARG)),
                 ClassNode.EMPTY_ARRAY,
                 stmnt(call(field(fieldNode), SET_VALUE, args(var(VALUE_ARG))))
             ));
@@ -106,7 +112,7 @@ public class SwingCommandObjectASTTransformation extends CommandObjectASTTransfo
                 returns(field(fieldNode))
             ));
 
-            if (propertyNode.getType().getTypeClass().isPrimitive()) {
+            if (ClassHelper.isPrimitiveType(propertyNodeType)) {
                 classNode.addObjectInitializerStatements(
                     stmnt(call(field(classNode, propertyName), SET_PRIMITIVE, args(constx(true))))
                 );
@@ -119,7 +125,15 @@ public class SwingCommandObjectASTTransformation extends CommandObjectASTTransfo
         }
     }
 
+    private ConstructorCallExpression instantiateAtomicValue(ClassNode propertyType, ClassNode propertyNodeType) {
+        if (propertyNodeType.isEnum()) {
+            return ctor(makeClassSafe(ENUM_ATOMIC_VALUE), args(classx(makeClassSafe(propertyNodeType))));
+        }
+        return ctor(makeClassSafe(propertyType), NO_ARGS);
+    }
+
     private static boolean isPropertyTypeSupported(PropertyNode propertyNode) {
-        return SUPPORTED_ATOM_TYPES.keySet().contains(propertyNode.getType());
+        return SUPPORTED_ATOM_TYPES.keySet().contains(propertyNode.getType()) ||
+            propertyNode.getType().isEnum();
     }
 }

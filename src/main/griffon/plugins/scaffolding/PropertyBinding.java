@@ -16,6 +16,7 @@
 
 package griffon.plugins.scaffolding;
 
+import griffon.core.resources.editors.PropertyEditorResolver;
 import griffon.exceptions.GriffonException;
 import griffon.plugins.validation.constraints.ConstrainedProperty;
 
@@ -27,7 +28,10 @@ import javax.swing.text.JTextComponent;
 import java.awt.Component;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.beans.*;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyDescriptor;
+import java.beans.PropertyEditor;
 import java.lang.reflect.InvocationTargetException;
 
 import static griffon.util.GriffonClassUtils.getProperty;
@@ -299,6 +303,6 @@ public class PropertyBinding extends AbstractPropertyBinding {
     }
 
     protected PropertyEditor resolveSourcePropertyEditor() {
-        return PropertyEditorManager.findEditor(sourcePropertyDescriptor.getPropertyType());
+        return PropertyEditorResolver.findEditor(sourcePropertyDescriptor.getPropertyType());
     }
 }
