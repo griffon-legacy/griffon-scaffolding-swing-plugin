@@ -279,8 +279,16 @@ public class PropertyBinding extends AbstractPropertyBinding {
     }
 
     protected void setSourcePropertyValue(Object value) {
+        String propertyName = sourcePropertyName;
+
+        if (source instanceof JComboBox) {
+            if ("selectedElement".equals(sourcePropertyName)) {
+                propertyName = "selectedItem";
+            }
+        }
+
         try {
-            setProperty(source, sourcePropertyName, value);
+            setProperty(source, propertyName, value);
         } catch (IllegalAccessException e) {
             throw new GriffonException(e);
         } catch (InvocationTargetException e) {
@@ -291,8 +299,16 @@ public class PropertyBinding extends AbstractPropertyBinding {
     }
 
     protected Object getSourcePropertyValue() {
+        String propertyName = sourcePropertyName;
+
+        if (source instanceof JComboBox) {
+            if ("selectedElement".equals(sourcePropertyName)) {
+                propertyName = "selectedItem";
+            }
+        }
+
         try {
-            return getProperty(source, sourcePropertyName);
+            return getProperty(source, propertyName);
         } catch (IllegalAccessException e) {
             throw new GriffonException(e);
         } catch (InvocationTargetException e) {
