@@ -6,8 +6,9 @@ panel(id: 'content') {
     migLayout(layoutConstraints: 'wrap 2', columnConstraints: '[left][left, grow]')
     scaffoldingContext.validateable.constrainedProperties().each { propertyName, constrainedProperty ->
         if (!constrainedProperty.display) return
-        label(scaffoldingContext.resolveMessage(propertyName + '.label', getNaturalName(propertyName)+':'),
-              constraints: 'top, left')
+        label(scaffoldingContext.resolveMessage(propertyName + '.label', getNaturalName(propertyName) + ':'),
+            constraints: 'top, left', id: propertyName + '_labeler',
+            cssClass: !constrainedProperty.nullable || !constrainedProperty.blank ? 'required' : '')
         Class widgetTemplate = scaffoldingContext.resolveWidget(propertyName)
         setVariable('propertyName', propertyName)
         setVariable('constrainedProperty', constrainedProperty)

@@ -7,7 +7,6 @@ if (constrainedProperty.minSize >= sizeThreshold || constrainedProperty.maxSize 
 
     Map widgetAttributes = scaffoldingContext.widgetAttributes('textArea', constrainedProperty)
     widgetAttributes.editable = constrainedProperty.editable
-    if (!widgetAttributes.containsKey('constraints')) widgetAttributes.constraints = 'top, grow'
     Map scrollPaneAttributes = widgetAttributes.remove('scrollPane') ?: [:]
     scrollPaneAttributes.constraints = widgetAttributes.remove('constraints')
 
@@ -22,7 +21,6 @@ if (constrainedProperty.minSize >= sizeThreshold || constrainedProperty.maxSize 
     String widgetNode = constrainedProperty.password ? 'passwordField' : 'textField'
     Map widgetAttributes = scaffoldingContext.widgetAttributes(widgetNode, constrainedProperty)
     widgetAttributes.editable = constrainedProperty.editable
-    if (!widgetAttributes.containsKey('constraints')) widgetAttributes.constraints = 'top, grow'
 
     errorDecorator {
         "${widgetNode}"(widgetAttributes)

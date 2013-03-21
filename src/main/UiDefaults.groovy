@@ -18,6 +18,14 @@
  * @author Andres Almiray
  */
 
+labeler {
+    constraints = 'top, left'
+}
+
+widget {
+    constraints = 'top, grow'
+}
+
 textField {
     columns = 20
 }

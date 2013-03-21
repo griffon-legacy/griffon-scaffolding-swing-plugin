@@ -3,7 +3,6 @@ package griffon.plugins.scaffolding.templates
 def valueHolder = scaffoldingContext.validateable."${propertyName}Property"()
 
 Map widgetAttributes = scaffoldingContext.widgetAttributes('slider', constrainedProperty)
-if (!widgetAttributes.containsKey('constraints')) widgetAttributes.constraints = 'top, grow'
 
 if (constrainedProperty.min != null && constrainedProperty.max != null) {
     widgetAttributes.minimum = constrainedProperty.min
