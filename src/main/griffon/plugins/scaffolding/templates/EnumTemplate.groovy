@@ -1,7 +1,5 @@
 package griffon.plugins.scaffolding.templates
 
-import griffon.plugins.scaffolding.atoms.EnumValue
-
 import javax.swing.DefaultComboBoxModel
 
 Map widgetAttributes = scaffoldingContext.widgetAttributes('comboBox', constrainedProperty)

@@ -47,6 +47,18 @@ public class PropertyBinding extends AbstractPropertyBinding {
     private AtomicValue property;
     private PropertyDescriptor sourcePropertyDescriptor;
 
+    private final PropertyChangeListener sourceChangeListener = new PropertyChangeListener() {
+        public void propertyChange(PropertyChangeEvent propertyChangeEvent) {
+            updateTarget();
+        }
+    };
+
+    private final PropertyChangeListener targetChangeListener = new PropertyChangeListener() {
+        public void propertyChange(PropertyChangeEvent propertyChangeEvent) {
+            updateSource();
+        }
+    };
+
     public static PropertyBinding create(final Component source, final String sourcePropertyName, final AtomicValue property, ConstrainedProperty constrainedProperty) {
         return new PropertyBinding(source, sourcePropertyName, property, constrainedProperty);
     }

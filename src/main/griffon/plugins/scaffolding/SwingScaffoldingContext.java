@@ -35,6 +35,13 @@ public final class SwingScaffoldingContext extends ScaffoldingContext {
 
     }
 
+    @Override
+    public Map<String, Object> widgetAttributes(String widget, ConstrainedProperty constrainedProperty) {
+        Map<String, Object> attributes = super.widgetAttributes(widget, constrainedProperty);
+        attributes.put("enabled", constrainedProperty.isEnabled());
+        return attributes;
+    }
+
     public void bind(Component source, String propertyName, AtomicValue property, ConstrainedProperty constrainedProperty) {
         addDisposable(PropertyBinding.create(source, propertyName, property, constrainedProperty));
     }

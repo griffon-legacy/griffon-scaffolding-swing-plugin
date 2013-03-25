@@ -1,0 +1,11 @@
+jlabel {
+    color: black;
+}
+
+.required {
+    font-weight: bold;
+}
+
+.error {
+    color: red;
+}
