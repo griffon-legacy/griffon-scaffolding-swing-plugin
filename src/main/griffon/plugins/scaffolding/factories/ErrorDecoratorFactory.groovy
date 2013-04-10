@@ -19,8 +19,12 @@ package griffon.plugins.scaffolding.factories
 import griffon.jxlayer.factory.JXLayerFactory
 import griffon.plugins.scaffolding.decorators.ErrorDecorator
 import griffon.plugins.scaffolding.decorators.IconErrorDecorator
-import griffon.plugins.scaffolding.decorators.TranslucentErrorDecorator
+import griffon.plugins.scaffolding.decorators.MaskErrorDecorator
 import griffon.plugins.scaffolding.nodes.CompositeLayerUI
+import org.jdesktop.jxlayer.JXLayer
+
+import static griffon.plugins.scaffolding.ScaffoldingUtils.getUiDefaults
+import static griffon.util.ConfigUtils.getConfigValueAsString
 
 /**
  * @author Andres Almiray
@@ -28,7 +32,7 @@ import griffon.plugins.scaffolding.nodes.CompositeLayerUI
 class ErrorDecoratorFactory extends JXLayerFactory {
     @Override
     Object newInstance(FactoryBuilderSupport builder, Object name, Object value, Map attributes) throws InstantiationException, IllegalAccessException {
-        Object node = super.newInstance(builder, name, value, attributes)
+        Object node = new JXLayer()
 
         builder.context.decorators = attributes.remove('decorators')
 
@@ -38,20 +42,19 @@ class ErrorDecoratorFactory extends JXLayerFactory {
     @Override
     void onNodeCompleted(FactoryBuilderSupport builder, Object parent, Object node) {
         List<ErrorDecorator> decorators = []
-        if (builder.context.decorators) {
-            builder.context.decorators.split(',').collect(decorators) { String decorator ->
+        String configuredDecorators = builder.context.decorators ?: getConfigValueAsString(getUiDefaults(), 'errors.decorators.defaults', 'icon')
+        if (configuredDecorators) {
+            configuredDecorators.split(',').collect(decorators) { String decorator ->
                 decorator = decorator.trim()
                 switch (decorator) {
                     case 'icon': return new IconErrorDecorator()
-                    case 'mask': return new TranslucentErrorDecorator()
+                    case 'mask': return new MaskErrorDecorator()
                     default:
                         Class decoratorClass = ApplicationClassLoader.get().loadClass(decorator)
-                        return (ErrorDecorator) decoratorClass.newInstance()
+                        return (ErrorDecorator) decoratorClass.newInstance(builder.app)
                 }
             }
         }
-
-        if (!decorators) decorators << new IconErrorDecorator()
 
         node.setUI(new CompositeLayerUI(
             builder.getVariable('scaffoldingContext'),

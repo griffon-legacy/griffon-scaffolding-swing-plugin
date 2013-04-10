@@ -16,6 +16,7 @@
 
 package griffon.plugins.scaffolding.decorators;
 
+import griffon.core.ApplicationHandler;
 import griffon.plugins.scaffolding.ScaffoldingContext;
 import griffon.plugins.validation.constraints.ConstrainedProperty;
 import org.jdesktop.jxlayer.JXLayer;
