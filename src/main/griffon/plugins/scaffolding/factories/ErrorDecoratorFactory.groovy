@@ -20,6 +20,7 @@ import griffon.jxlayer.factory.JXLayerFactory
 import griffon.plugins.scaffolding.decorators.ErrorDecorator
 import griffon.plugins.scaffolding.decorators.IconErrorDecorator
 import griffon.plugins.scaffolding.decorators.MaskErrorDecorator
+import griffon.plugins.scaffolding.decorators.TooltipErrorDecorator
 import griffon.plugins.scaffolding.nodes.CompositeLayerUI
 import org.jdesktop.jxlayer.JXLayer
 
@@ -42,13 +43,14 @@ class ErrorDecoratorFactory extends JXLayerFactory {
     @Override
     void onNodeCompleted(FactoryBuilderSupport builder, Object parent, Object node) {
         List<ErrorDecorator> decorators = []
-        String configuredDecorators = builder.context.decorators ?: getConfigValueAsString(getUiDefaults(), 'errors.decorators.defaults', 'icon')
+        String configuredDecorators = builder.context.decorators ?: getConfigValueAsString(getUiDefaults(), 'errors.decorators.defaults', 'icon, tooltip')
         if (configuredDecorators) {
             configuredDecorators.split(',').collect(decorators) { String decorator ->
                 decorator = decorator.trim()
                 switch (decorator) {
                     case 'icon': return new IconErrorDecorator()
                     case 'mask': return new MaskErrorDecorator()
+                    case 'tooltip': return new TooltipErrorDecorator()
                     default:
                         Class decoratorClass = ApplicationClassLoader.get().loadClass(decorator)
                         return (ErrorDecorator) decoratorClass.newInstance(builder.app)

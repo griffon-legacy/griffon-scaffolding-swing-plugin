@@ -19,13 +19,13 @@
  */
 class ScaffoldingSwingGriffonPlugin {
     // the plugin version
-    String version = '0.1'
+    String version = '0.1.0'
     // the version or versions of Griffon the plugin is designed for
     String griffonVersion = '1.3.0 > *'
     // the other plugins this plugin depends on
     Map dependsOn = [
         'swing'      : '1.3.0',
-        'scaffolding': '0.1',
+        'scaffolding': '0.1.0',
         'miglayout'  : '1.0.0',
         'css-builder': '1.1.0',
         'jxlayer'    : '1.0.0'

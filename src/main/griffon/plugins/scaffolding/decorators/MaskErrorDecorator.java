@@ -23,7 +23,6 @@ import griffon.swing.formatters.ColorFormatter;
 import org.jdesktop.jxlayer.JXLayer;
 
 import javax.swing.JComponent;
-import javax.swing.text.JTextComponent;
 import java.awt.*;
 
 import static griffon.plugins.scaffolding.ScaffoldingUtils.getUiDefaults;
@@ -32,7 +31,7 @@ import static griffon.util.ConfigUtils.getConfigValueAsString;
 /**
  * @author Andres Almiray
  */
-public class MaskErrorDecorator extends AbstractErrorDecorator<JTextComponent> {
+public class MaskErrorDecorator extends AbstractErrorDecorator<JComponent> {
     private static final String KEY_ERRORS_DECORATORS_MASK_COLOR = "errors.decorators.mask.color";
     private Color color = Color.RED;
 
@@ -51,12 +50,12 @@ public class MaskErrorDecorator extends AbstractErrorDecorator<JTextComponent> {
         color = null;
     }
 
-    public void paintLayerWithErrors(Graphics2D g2, JXLayer<? extends JTextComponent> layer, ScaffoldingContext scaffoldingContext, ConstrainedProperty constrainedProperty) {
+    public void paintLayerWithErrors(Graphics2D g2, JXLayer<? extends JComponent> layer, ScaffoldingContext scaffoldingContext, ConstrainedProperty constrainedProperty) {
         // to be in sync with the view if the layer has a border
         Insets layerInsets = layer.getInsets();
         g2.translate(layerInsets.left, layerInsets.top);
 
-        JTextComponent view = layer.getView();
+        JComponent view = layer.getView();
         // To prevent painting on view's border
         Insets insets = view.getInsets();
         g2.clip(new Rectangle(insets.left, insets.top,

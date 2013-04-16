@@ -24,7 +24,6 @@ import org.jdesktop.jxlayer.JXLayer;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
-import javax.swing.text.JTextComponent;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -37,7 +36,7 @@ import static griffon.util.GriffonNameUtils.isBlank;
 /**
  * @author Andres Almiray
  */
-public class IconErrorDecorator extends AbstractErrorDecorator<JTextComponent> {
+public class IconErrorDecorator extends AbstractErrorDecorator<JComponent> {
     public static final String KEY_ERRORS_DECORATORS_ICON_POSITION = "errors.decorators.icon.position";
     private static BufferedImage ACCEPT_ICON;
     private static BufferedImage CANCEL_ICON;
@@ -70,7 +69,7 @@ public class IconErrorDecorator extends AbstractErrorDecorator<JTextComponent> {
     }
 
     public void installUI(JComponent c) {
-        JXLayer<JTextComponent> l = (JXLayer<JTextComponent>) c;
+        JXLayer<JComponent> l = (JXLayer<JComponent>) c;
         switch (position) {
             case TOP_LEFT:
             case BOTTOM_LEFT:
@@ -84,11 +83,11 @@ public class IconErrorDecorator extends AbstractErrorDecorator<JTextComponent> {
     }
 
     public void uninstallUI(JComponent c) {
-        JXLayer<JTextComponent> l = (JXLayer<JTextComponent>) c;
+        JXLayer<JComponent> l = (JXLayer<JComponent>) c;
         l.setBorder(null);
     }
 
-    public void paintLayerWithNoErrors(Graphics2D g2, JXLayer<? extends JTextComponent> layer, ScaffoldingContext scaffoldingContext, ConstrainedProperty constrainedProperty) {
+    public void paintLayerWithNoErrors(Graphics2D g2, JXLayer<? extends JComponent> layer, ScaffoldingContext scaffoldingContext, ConstrainedProperty constrainedProperty) {
         try {
             Object propertyValue = GriffonClassUtils.getProperty(scaffoldingContext.getValidateable(), constrainedProperty.getPropertyName());
             if (propertyValue == null || propertyValue instanceof CharSequence && isBlank(String.valueOf(propertyValue))) {
@@ -117,7 +116,7 @@ public class IconErrorDecorator extends AbstractErrorDecorator<JTextComponent> {
         }
     }
 
-    public void paintLayerWithErrors(Graphics2D g2, JXLayer<? extends JTextComponent> layer, ScaffoldingContext scaffoldingContext, ConstrainedProperty constrainedProperty) {
+    public void paintLayerWithErrors(Graphics2D g2, JXLayer<? extends JComponent> layer, ScaffoldingContext scaffoldingContext, ConstrainedProperty constrainedProperty) {
         switch (position) {
             case TOP_LEFT:
                 g2.drawImage(CANCEL_ICON, 0, 0, null);

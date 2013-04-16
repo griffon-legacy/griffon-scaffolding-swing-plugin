@@ -18,9 +18,11 @@ package griffon.plugins.scaffolding.decorators;
 
 import griffon.plugins.scaffolding.ScaffoldingContext;
 import griffon.plugins.validation.constraints.ConstrainedProperty;
+import griffon.swing.SwingUtils;
 import org.jdesktop.jxlayer.JXLayer;
 
 import javax.swing.JComponent;
+import java.awt.Component;
 import java.awt.Graphics2D;
 
 /**
@@ -41,5 +43,10 @@ public abstract class AbstractErrorDecorator<V extends JComponent> implements Er
 
     public void uninstallUI(JComponent c) {
 
+    }
+
+    protected JComponent labelFor(JXLayer<? extends V> layer, ConstrainedProperty constrainedProperty) {
+        Component component = SwingUtils.findComponentByName(constrainedProperty.getPropertyName() + "_labeler", layer.getParent());
+        return component instanceof JComponent ? (JComponent) component : null;
     }
 }
