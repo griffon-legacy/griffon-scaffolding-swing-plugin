@@ -1,7 +1,5 @@
 package griffon.plugins.scaffolding.templates
 
-import static griffon.util.GriffonNameUtils.getNaturalName
-
 panel(id: 'content') {
     migLayout(layoutConstraints: 'wrap 2', columnConstraints: '[left][left, grow]')
     scaffoldingContext.validateable.constrainedProperties().each { propertyName, constrainedProperty ->

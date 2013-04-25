@@ -24,6 +24,10 @@ import griffon.plugins.scaffolding.decorators.TooltipErrorDecorator
 import griffon.plugins.scaffolding.nodes.CompositeLayerUI
 import org.jdesktop.jxlayer.JXLayer
 
+import griffon.util.ApplicationClassLoader
+
+import javax.swing.JComponent
+
 import static griffon.plugins.scaffolding.ScaffoldingUtils.getUiDefaults
 import static griffon.util.ConfigUtils.getConfigValueAsString
 
@@ -38,6 +42,13 @@ class ErrorDecoratorFactory extends JXLayerFactory {
         builder.context.decorators = attributes.remove('decorators')
 
         node
+    }
+
+    @Override
+    void setChild(FactoryBuilderSupport builder, Object parent, Object child) {
+        if (child instanceof JComponent) {
+            super.setChild(builder, parent, child)
+        }
     }
 
     @Override

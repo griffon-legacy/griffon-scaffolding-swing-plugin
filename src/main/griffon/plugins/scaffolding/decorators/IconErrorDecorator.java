@@ -69,16 +69,15 @@ public class IconErrorDecorator extends AbstractErrorDecorator<JComponent> {
     }
 
     public void installUI(JComponent c) {
-        JXLayer<JComponent> l = (JXLayer<JComponent>) c;
+        JXLayer<JComponent> layer = (JXLayer<JComponent>) c;
         switch (position) {
             case TOP_LEFT:
             case BOTTOM_LEFT:
-                l.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 0));
+                layer.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 0));
                 break;
             case TOP_RIGHT:
             case BOTTOM_RIGHT:
-                l.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
-                l.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
+                layer.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
         }
     }
 
